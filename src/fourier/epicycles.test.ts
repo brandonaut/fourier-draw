@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Path } from '../path/types';
-import { decompose, evaluateAt, orderForRender, topN } from './epicycles';
+import {
+  chainPositions,
+  decompose,
+  evaluateAt,
+  orderForRender,
+  topN,
+  traceCurve
+} from './epicycles';
 
 describe('decompose', () => {
   it('returns empty for empty input', () => {
@@ -121,5 +128,55 @@ describe('evaluateAt', () => {
     const q = evaluateAt(eps, 0.25);
     expect(q.x).toBeCloseTo(1, 12);
     expect(q.y).toBeCloseTo(2, 12);
+  });
+});
+
+describe('chainPositions', () => {
+  it('starts at origin and ends at evaluateAt', () => {
+    const eps = [
+      { frequency: 0, amplitude: 2, phase: 0 },
+      { frequency: 1, amplitude: 1, phase: Math.PI / 2 },
+      { frequency: -1, amplitude: 0.5, phase: 0 }
+    ];
+    const t = 0.13;
+    const positions = chainPositions(eps, t);
+    expect(positions).toHaveLength(eps.length + 1);
+    expect(positions[0]).toEqual({ x: 0, y: 0 });
+    const tip = evaluateAt(eps, t);
+    const last = positions[eps.length];
+    expect(last.x).toBeCloseTo(tip.x, 12);
+    expect(last.y).toBeCloseTo(tip.y, 12);
+  });
+
+  it('successive deltas equal individual epicycle vectors', () => {
+    const eps = [
+      { frequency: 2, amplitude: 1, phase: 0 },
+      { frequency: -3, amplitude: 0.7, phase: 1 }
+    ];
+    const t = 0.4;
+    const pos = chainPositions(eps, t);
+    for (let i = 0; i < eps.length; i++) {
+      const e = eps[i];
+      const angle = 2 * Math.PI * e.frequency * t + e.phase;
+      const dx = pos[i + 1].x - pos[i].x;
+      const dy = pos[i + 1].y - pos[i].y;
+      expect(dx).toBeCloseTo(e.amplitude * Math.cos(angle), 12);
+      expect(dy).toBeCloseTo(e.amplitude * Math.sin(angle), 12);
+    }
+  });
+});
+
+describe('traceCurve', () => {
+  it('returns the requested number of samples', () => {
+    const eps = [{ frequency: 1, amplitude: 1, phase: 0 }];
+    expect(traceCurve(eps, 16)).toHaveLength(16);
+  });
+
+  it('a single unit epicycle at frequency 1 traces a unit circle', () => {
+    const eps = [{ frequency: 1, amplitude: 1, phase: 0 }];
+    const trace = traceCurve(eps, 64);
+    for (const p of trace) {
+      expect(Math.hypot(p.x, p.y)).toBeCloseTo(1, 12);
+    }
   });
 });

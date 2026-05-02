@@ -91,3 +91,36 @@ export function orderForRender(epicycles: Epicycle[]): Epicycle[] {
     return b.frequency - a.frequency;
   });
 }
+
+/**
+ * Cumulative tip positions along an epicycle chain at time `t`.
+ * Returns `epicycles.length + 1` points: index 0 is the chain origin (0,0),
+ * each subsequent index is the tip after applying that epicycle. The final
+ * point equals `evaluateAt(epicycles, t)`.
+ */
+export function chainPositions(epicycles: Epicycle[], t: number): Point[] {
+  const out: Point[] = new Array(epicycles.length + 1);
+  let x = 0;
+  let y = 0;
+  out[0] = { x, y };
+  for (let i = 0; i < epicycles.length; i++) {
+    const e = epicycles[i];
+    const angle = 2 * Math.PI * e.frequency * t + e.phase;
+    x += e.amplitude * Math.cos(angle);
+    y += e.amplitude * Math.sin(angle);
+    out[i + 1] = { x, y };
+  }
+  return out;
+}
+
+/**
+ * Sample the curve traced by the chain over `samples` evenly-spaced t-values
+ * in [0, 1). Used to draw the persistent trace.
+ */
+export function traceCurve(epicycles: Epicycle[], samples: number): Path {
+  const out: Path = new Array(samples);
+  for (let i = 0; i < samples; i++) {
+    out[i] = evaluateAt(epicycles, i / samples);
+  }
+  return out;
+}

@@ -1,5 +1,7 @@
 import './styles.css';
 import { DrawingCanvas } from './canvas/drawingCanvas';
+import { EpicycleRenderer } from './canvas/epicycleRenderer';
+import { pathToEpicycles } from './fourier/pipeline';
 import type { Path } from './path/types';
 
 const app = document.getElementById('app');
@@ -9,18 +11,124 @@ app.innerHTML = `
   <div class="app-bar top">
     <strong>Fourier Draw</strong>
     <span class="spacer"></span>
+    <button id="btn-mode" type="button" class="primary">Play</button>
     <button id="btn-clear" type="button">Clear</button>
   </div>
-  <canvas id="canvas" class="app-canvas"></canvas>
+  <canvas id="draw-canvas" class="app-canvas layer"></canvas>
+  <canvas id="epi-canvas" class="app-canvas layer"></canvas>
+  <div class="app-bar bottom" id="controls" hidden>
+    <div class="row">
+      <label for="arrows">Arrows: <span id="arrows-val">64</span></label>
+      <input id="arrows" type="range" min="1" max="256" value="64" />
+    </div>
+    <div class="row">
+      <label for="speed">Speed: <span id="speed-val">1.00×</span></label>
+      <input id="speed" type="range" min="0.1" max="3" step="0.05" value="1" />
+    </div>
+    <div class="row">
+      <label class="check">
+        <input id="auto-close" type="checkbox" checked />
+        <span>Auto-close shape</span>
+      </label>
+      <button id="btn-play" type="button" class="primary">Pause</button>
+    </div>
+  </div>
 `;
 
-const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-const drawing = new DrawingCanvas(canvas, {
-  onPathComplete: (path: Path) => {
-    console.log('path complete', path.length, 'points');
+const drawCanvas = document.getElementById('draw-canvas') as HTMLCanvasElement;
+const epiCanvas = document.getElementById('epi-canvas') as HTMLCanvasElement;
+
+let lastPath: Path = [];
+let mode: 'draw' | 'play' = 'draw';
+
+const drawing = new DrawingCanvas(drawCanvas, {
+  onPathComplete: (path) => {
+    lastPath = path;
+    setMode('play');
   }
 });
 
-window.addEventListener('resize', () => drawing.resize());
+const renderer = new EpicycleRenderer(epiCanvas, {
+  arrowCount: 64,
+  periodSeconds: 8,
+  speed: 1
+});
 
-document.getElementById('btn-clear')?.addEventListener('click', () => drawing.clear());
+window.addEventListener('resize', () => {
+  drawing.resize();
+  renderer.resize();
+});
+
+const btnMode = document.getElementById('btn-mode') as HTMLButtonElement;
+const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
+const btnPlay = document.getElementById('btn-play') as HTMLButtonElement;
+const controls = document.getElementById('controls') as HTMLDivElement;
+const arrowsInput = document.getElementById('arrows') as HTMLInputElement;
+const arrowsVal = document.getElementById('arrows-val') as HTMLSpanElement;
+const speedInput = document.getElementById('speed') as HTMLInputElement;
+const speedVal = document.getElementById('speed-val') as HTMLSpanElement;
+const autoCloseInput = document.getElementById('auto-close') as HTMLInputElement;
+
+function setMode(next: 'draw' | 'play'): void {
+  mode = next;
+  if (mode === 'play') {
+    if (lastPath.length < 2) {
+      mode = 'draw';
+      return;
+    }
+    rebuildEpicycles();
+    epiCanvas.style.pointerEvents = 'auto';
+    drawCanvas.style.opacity = '0.18';
+    controls.hidden = false;
+    btnMode.textContent = 'Draw';
+    renderer.play();
+    btnPlay.textContent = 'Pause';
+  } else {
+    renderer.clear();
+    drawing.clear();
+    drawCanvas.style.opacity = '1';
+    controls.hidden = true;
+    btnMode.textContent = 'Play';
+  }
+}
+
+function rebuildEpicycles(): void {
+  const eps = pathToEpicycles(lastPath, {
+    samples: 512,
+    closePath: autoCloseInput.checked
+  });
+  if (!eps) return;
+  renderer.load(eps);
+  renderer.setArrowCount(Number.parseInt(arrowsInput.value, 10));
+  renderer.setSpeed(Number.parseFloat(speedInput.value));
+  renderer.play();
+  btnPlay.textContent = 'Pause';
+}
+
+btnMode.addEventListener('click', () => setMode(mode === 'draw' ? 'play' : 'draw'));
+btnClear.addEventListener('click', () => {
+  lastPath = [];
+  setMode('draw');
+});
+btnPlay.addEventListener('click', () => {
+  if (renderer.isPaused()) {
+    renderer.play();
+    btnPlay.textContent = 'Pause';
+  } else {
+    renderer.pause();
+    btnPlay.textContent = 'Play';
+  }
+});
+arrowsInput.addEventListener('input', () => {
+  const n = Number.parseInt(arrowsInput.value, 10);
+  arrowsVal.textContent = String(n);
+  renderer.setArrowCount(n);
+});
+speedInput.addEventListener('input', () => {
+  const s = Number.parseFloat(speedInput.value);
+  speedVal.textContent = `${s.toFixed(2)}×`;
+  renderer.setSpeed(s);
+});
+autoCloseInput.addEventListener('change', () => {
+  if (mode === 'play') rebuildEpicycles();
+});
