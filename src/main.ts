@@ -4,6 +4,7 @@ import { EpicycleRenderer } from './canvas/epicycleRenderer';
 import { renderThumbnail } from './canvas/thumbnail';
 import { pathToEpicycles } from './fourier/pipeline';
 import type { Path } from './path/types';
+import { decodePath, encodePath } from './path/codec';
 import { DrawingStore, newDrawingId, type Drawing } from './storage/db';
 
 const app = document.getElementById('app');
@@ -15,6 +16,7 @@ app.innerHTML = `
     <span class="spacer"></span>
     <button id="btn-save" type="button">Save</button>
     <button id="btn-open" type="button">Open</button>
+    <button id="btn-share" type="button">Share</button>
     <button id="btn-mode" type="button" class="primary">Play</button>
     <button id="btn-clear" type="button">Clear</button>
   </div>
@@ -79,6 +81,7 @@ const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
 const btnPlay = document.getElementById('btn-play') as HTMLButtonElement;
 const btnSave = document.getElementById('btn-save') as HTMLButtonElement;
 const btnOpen = document.getElementById('btn-open') as HTMLButtonElement;
+const btnShare = document.getElementById('btn-share') as HTMLButtonElement;
 const controls = document.getElementById('controls') as HTMLDivElement;
 const arrowsInput = document.getElementById('arrows') as HTMLInputElement;
 const arrowsVal = document.getElementById('arrows-val') as HTMLSpanElement;
@@ -224,6 +227,55 @@ modal.addEventListener('click', async (e) => {
 modalClose.addEventListener('click', () => {
   modal.hidden = true;
 });
+
+btnShare.addEventListener('click', async () => {
+  if (lastPath.length < 2) {
+    alert('Draw something first.');
+    return;
+  }
+  const encoded = encodePath(lastPath);
+  const shareUrl = `${location.origin}${location.pathname}#d=${encoded}`;
+  const title = 'Fourier Draw';
+  const text = 'Watch my drawing decompose into Fourier epicycles.';
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text, url: shareUrl });
+      return;
+    } catch (err) {
+      if ((err as DOMException)?.name === 'AbortError') return;
+      // Fall through to clipboard fallback.
+    }
+  }
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    alert('Share link copied to clipboard.');
+  } catch {
+    prompt('Copy this link:', shareUrl);
+  }
+});
+
+// Import a path from the URL hash on load: #d=<base64>
+function importHashPath(): boolean {
+  const hash = location.hash;
+  if (!hash.startsWith('#d=')) return false;
+  const encoded = hash.slice('#d='.length);
+  try {
+    const path = decodePath(encoded);
+    if (path.length >= 2) {
+      lastPath = path;
+      drawing.setPath(path);
+      // Clear the hash so reload doesn't re-import on top of edits.
+      history.replaceState(null, '', location.pathname + location.search);
+      setMode('play');
+      return true;
+    }
+  } catch (err) {
+    console.warn('failed to import shared path', err);
+  }
+  return false;
+}
+
+importHashPath();
 
 const HTML_ESCAPES: Record<string, string> = {
   '&': '&amp;',
