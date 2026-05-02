@@ -32,6 +32,10 @@ app.innerHTML = `
       <input id="speed" type="range" min="0.1" max="3" step="0.05" value="1" />
     </div>
     <div class="row">
+      <label for="fade">Trail: <span id="fade-val">70%</span></label>
+      <input id="fade" type="range" min="0.05" max="1" step="0.05" value="0.7" />
+    </div>
+    <div class="row">
       <label class="check">
         <input id="auto-close" type="checkbox" checked />
         <span>Auto-close shape</span>
@@ -87,6 +91,8 @@ const arrowsInput = document.getElementById('arrows') as HTMLInputElement;
 const arrowsVal = document.getElementById('arrows-val') as HTMLSpanElement;
 const speedInput = document.getElementById('speed') as HTMLInputElement;
 const speedVal = document.getElementById('speed-val') as HTMLSpanElement;
+const fadeInput = document.getElementById('fade') as HTMLInputElement;
+const fadeVal = document.getElementById('fade-val') as HTMLSpanElement;
 const autoCloseInput = document.getElementById('auto-close') as HTMLInputElement;
 const modal = document.getElementById('modal') as HTMLDivElement;
 const modalBody = document.getElementById('modal-body') as HTMLDivElement;
@@ -100,7 +106,6 @@ function setMode(next: 'draw' | 'play'): void {
       return;
     }
     rebuildEpicycles();
-    epiCanvas.style.pointerEvents = 'auto';
     drawCanvas.style.opacity = '0.18';
     controls.hidden = false;
     btnMode.textContent = 'Draw';
@@ -123,6 +128,7 @@ function rebuildEpicycles(): void {
   renderer.load(eps);
   renderer.setArrowCount(Number.parseInt(arrowsInput.value, 10));
   renderer.setSpeed(Number.parseFloat(speedInput.value));
+  renderer.setFade(Number.parseFloat(fadeInput.value));
   renderer.play();
   btnPlay.textContent = 'Pause';
 }
@@ -151,6 +157,11 @@ speedInput.addEventListener('input', () => {
   const s = Number.parseFloat(speedInput.value);
   speedVal.textContent = `${s.toFixed(2)}×`;
   renderer.setSpeed(s);
+});
+fadeInput.addEventListener('input', () => {
+  const f = Number.parseFloat(fadeInput.value);
+  fadeVal.textContent = `${Math.round(f * 100)}%`;
+  renderer.setFade(f);
 });
 autoCloseInput.addEventListener('change', () => {
   if (mode === 'play') rebuildEpicycles();
