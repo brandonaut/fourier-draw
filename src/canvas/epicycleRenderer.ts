@@ -158,31 +158,6 @@ export class EpicycleRenderer {
     this.rafId = requestAnimationFrame(this.tick);
   };
 
-  private fitTransform(): { sx: number; tx: number; ty: number } {
-    const w = this.canvas.width / this.dpr;
-    const h = this.canvas.height / this.dpr;
-    if (!this.state || this.state.trace.length === 0) {
-      return { sx: 1, tx: w / 2, ty: h / 2 };
-    }
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    for (const p of this.state.trace) {
-      if (p.x < minX) minX = p.x;
-      if (p.y < minY) minY = p.y;
-      if (p.x > maxX) maxX = p.x;
-      if (p.y > maxY) maxY = p.y;
-    }
-    const traceW = Math.max(1, maxX - minX);
-    const traceH = Math.max(1, maxY - minY);
-    const margin = 0.85;
-    const sx = Math.min((w / traceW) * margin, (h / traceH) * margin);
-    const cx = (minX + maxX) / 2;
-    const cy = (minY + maxY) / 2;
-    return { sx, tx: w / 2 - cx * sx, ty: h / 2 - cy * sx };
-  }
-
   private drawFrame(t: number): void {
     if (!this.state) return;
     const ctx = this.ctx;
@@ -190,11 +165,10 @@ export class EpicycleRenderer {
     const h = this.canvas.height / this.dpr;
     ctx.clearRect(0, 0, w, h);
 
-    const tf = this.fitTransform();
-    const toScreen = (p: Point): Point => ({
-      x: p.x * tf.sx + tf.tx,
-      y: p.y * tf.sx + tf.ty
-    });
+    // Path coordinates are already in CSS-pixel space (the same space the user
+    // drew in), so render with an identity transform — the trace will overlay
+    // the original strokes exactly.
+    const toScreen = (p: Point): Point => ({ x: p.x, y: p.y });
 
     // Trace.
     const trace = this.state.trace;
@@ -218,7 +192,7 @@ export class EpicycleRenderer {
     ctx.strokeStyle = 'rgba(125, 211, 252, 0.45)';
     for (let i = 0; i < this.state.active.length; i++) {
       const center = toScreen(chain[i]);
-      const r = this.state.active[i].amplitude * tf.sx;
+      const r = this.state.active[i].amplitude;
       if (r > 0.5) {
         ctx.beginPath();
         ctx.arc(center.x, center.y, r, 0, Math.PI * 2);
