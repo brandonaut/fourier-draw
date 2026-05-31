@@ -15,7 +15,7 @@
     "url": "https://github.com/brandonaut/fourier-draw/issues"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "vite",

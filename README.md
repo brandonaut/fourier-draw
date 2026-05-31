@@ -15,7 +15,7 @@ Draw a shape on your phone or laptop. Watch it decompose into a chain of rotatin
 
 ## Quick start
 
-Requires Node 20+ (see `.nvmrc`).
+Requires Node 24+ (Active LTS — see `.nvmrc`).
 
 ```bash
 npm install
