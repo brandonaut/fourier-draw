@@ -1,8 +1,22 @@
 {
   "name": "fourier-draw",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Draw a shape and watch it decompose into rotating Fourier epicycles. Installable PWA, vanilla TypeScript + Vite.",
   "type": "module",
+  "license": "MIT",
+  "author": "Brandon",
+  "homepage": "https://hubermx.com/fourier-draw/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brandonaut/fourier-draw.git"
+  },
+  "bugs": {
+    "url": "https://github.com/brandonaut/fourier-draw/issues"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

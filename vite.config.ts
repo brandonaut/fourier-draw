@@ -2,6 +2,9 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+  // Served from https://hubermx.com/fourier-draw/ — Vite needs to prefix
+  // asset URLs and the PWA service-worker scope with the subpath.
+  base: '/fourier-draw/',
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',
@@ -17,7 +20,7 @@ export default defineConfig({
         background_color: '#0b0f17',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        start_url: '.',
         icons: [
           { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml' },
           { src: 'icon-maskable.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' }
